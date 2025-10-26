@@ -30,4 +30,4 @@ RUN mkdir -p /app/logs
 EXPOSE 8000
 
 # Команда по умолчанию
-CMD ["python", "main.py"]
+CMD ["python", "-u", "main.py"]
