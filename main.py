@@ -69,15 +69,22 @@ if not path.exists(DATA_DIR):
 async def send_email(subject: str, message_text: str) -> bool:
     try:
         # Проверяем, что все необходимые переменные загружены
-        logger.info("Проверка email настроек...")
+        logger.info("=" * 50)
+        logger.info("Попытка отправки email...")
         logger.info(f"EMAIL_USER: {'✓' if EMAIL_USER else '✗'}")
-        logger.info(f"EMAIL_PASSWORD: {'✓' if EMAIL_PASSWORD else '✗'}")
-        logger.info(f"EMAIL_TO: {'✓' if EMAIL_TO else '✗'}")
+        logger.info(f"EMAIL_PASSWORD: {'✓ (скрыт)' if EMAIL_PASSWORD else '✗'}")
+        logger.info(f"EMAIL_TO: {EMAIL_TO if EMAIL_TO else '✗'}")
         logger.info(f"EMAIL_HOST: {EMAIL_HOST}")
         logger.info(f"EMAIL_PORT: {EMAIL_PORT}")
+        logger.info("=" * 50)
         
         if not all([EMAIL_USER, EMAIL_PASSWORD, EMAIL_TO, EMAIL_HOST, EMAIL_PORT]):
-            logger.error("Не все email настройки загружены")
+            logger.error("❌ Не все email настройки загружены!")
+            missing = []
+            if not EMAIL_USER: missing.append("EMAIL_USER")
+            if not EMAIL_PASSWORD: missing.append("EMAIL_PASSWORD")
+            if not EMAIL_TO: missing.append("EMAIL_TO")
+            logger.error(f"Отсутствуют: {', '.join(missing)}")
             return False
             
         msg = MIMEMultipart()
@@ -86,22 +93,27 @@ async def send_email(subject: str, message_text: str) -> bool:
         msg['Subject'] = subject
         msg.attach(MIMEText(message_text, 'plain', 'utf-8'))
 
-        logger.info(f"Попытка подключения к SMTP серверу: {EMAIL_HOST}:{EMAIL_PORT}")
+        logger.info(f"Подключение к SMTP: {EMAIL_HOST}:{EMAIL_PORT}")
         
         with smtplib.SMTP_SSL(EMAIL_HOST, EMAIL_PORT, timeout=30) as server:
+            logger.info("Аутентификация...")
             server.login(EMAIL_USER, EMAIL_PASSWORD)
+            logger.info("Отправка сообщения...")
             server.send_message(msg)
-            logger.info("Email успешно отправлен")
+            logger.info("✅ Email успешно отправлен!")
         return True
         
     except smtplib.SMTPAuthenticationError as e:
-        logger.error(f"Ошибка аутентификации SMTP: {e}")
+        logger.error(f"❌ Ошибка аутентификации SMTP: {e}")
+        logger.error("Проверьте правильность EMAIL_USER и EMAIL_PASSWORD")
         return False
     except smtplib.SMTPException as e:
-        logger.error(f"Ошибка SMTP: {e}")
+        logger.error(f"❌ Ошибка SMTP: {e}")
         return False
     except Exception as e:
-        logger.error(f"Неожиданная ошибка при отправке email: {e.__class__.__name__}: {e}")
+        logger.error(f"❌ Неожиданная ошибка при отправке email: {e.__class__.__name__}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return False
 
 # Убираем дублирующий print, так как он уже есть выше
@@ -170,16 +182,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         """
 
         logger.info("Попытка отправки email...")
+        logger.info(f"Текст сообщения: {update.message.text}")
+        
         email_success = await send_email(subject, message)
         
         if email_success:
-            logger.info("Email успешно отправлен")
+            logger.info("Email успешно отправлен на сервере")
             await update.message.reply_text(
-                "✅ Ваше сообщение успешно отправлено! С вами свяжутся в ближайшее время.",
+                "✅ Ваше сообщение успешно отправлено! Сообщение обработают и свяжутся с вами, если для запроса это необходимо!",
                 reply_markup=get_main_reply_markup()
             )
         else:
-            logger.error("Не удалось отправить email")
+            logger.error("Не удалось отправить email на сервере")
             await update.message.reply_text(
                 "❌ Произошла ошибка при отправке. Пожалуйста, попробуйте позже.",
                 reply_markup=get_main_reply_markup()
