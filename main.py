@@ -27,8 +27,7 @@ load_dotenv(override=True)
 
 # Настройка логирования
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,13 @@ print(f"Настройки загружены: {EMAIL_USER}@{EMAIL_HOST}:{EMAIL_
 
 # Константы
 DATA_DIR = "./data"
-(MAIN_MENU, PSYCHOLOGISTS_MENU, SOCIAL_PEDAGOGUES_MENU, DOCUMENTS_MENU, AWAITING_MESSAGE) = range(5)
+(
+    MAIN_MENU,
+    PSYCHOLOGISTS_MENU,
+    SOCIAL_PEDAGOGUES_MENU,
+    DOCUMENTS_MENU,
+    AWAITING_MESSAGE,
+) = range(5)
 user_states = {}
 
 # Проверяем существование папки data
@@ -77,24 +82,27 @@ async def send_email(subject: str, message_text: str) -> bool:
         logger.info(f"EMAIL_HOST: {EMAIL_HOST}")
         logger.info(f"EMAIL_PORT: {EMAIL_PORT}")
         logger.info("=" * 50)
-        
+
         if not all([EMAIL_USER, EMAIL_PASSWORD, EMAIL_TO, EMAIL_HOST, EMAIL_PORT]):
             logger.error("❌ Не все email настройки загружены!")
             missing = []
-            if not EMAIL_USER: missing.append("EMAIL_USER")
-            if not EMAIL_PASSWORD: missing.append("EMAIL_PASSWORD")
-            if not EMAIL_TO: missing.append("EMAIL_TO")
+            if not EMAIL_USER:
+                missing.append("EMAIL_USER")
+            if not EMAIL_PASSWORD:
+                missing.append("EMAIL_PASSWORD")
+            if not EMAIL_TO:
+                missing.append("EMAIL_TO")
             logger.error(f"Отсутствуют: {', '.join(missing)}")
             return False
-            
+
         msg = MIMEMultipart()
-        msg['From'] = EMAIL_USER
-        msg['To'] = EMAIL_TO
-        msg['Subject'] = subject
-        msg.attach(MIMEText(message_text, 'plain', 'utf-8'))
+        msg["From"] = EMAIL_USER
+        msg["To"] = EMAIL_TO
+        msg["Subject"] = subject
+        msg.attach(MIMEText(message_text, "plain", "utf-8"))
 
         logger.info(f"Подключение к SMTP: {EMAIL_HOST}:{EMAIL_PORT}")
-        
+
         with smtplib.SMTP_SSL(EMAIL_HOST, EMAIL_PORT, timeout=30) as server:
             logger.info("Аутентификация...")
             server.login(EMAIL_USER, EMAIL_PASSWORD)
@@ -102,7 +110,7 @@ async def send_email(subject: str, message_text: str) -> bool:
             server.send_message(msg)
             logger.info("✅ Email успешно отправлен!")
         return True
-        
+
     except smtplib.SMTPAuthenticationError as e:
         logger.error(f"❌ Ошибка аутентификации SMTP: {e}")
         logger.error("Проверьте правильность EMAIL_USER и EMAIL_PASSWORD")
@@ -111,28 +119,34 @@ async def send_email(subject: str, message_text: str) -> bool:
         logger.error(f"❌ Ошибка SMTP: {e}")
         return False
     except Exception as e:
-        logger.error(f"❌ Неожиданная ошибка при отправке email: {e.__class__.__name__}: {e}")
+        logger.error(
+            f"❌ Неожиданная ошибка при отправке email: {e.__class__.__name__}: {e}"
+        )
         import traceback
+
         logger.error(traceback.format_exc())
         return False
 
+
 # Убираем дублирующий print, так как он уже есть выше
+
 
 def get_main_reply_markup():
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton("🚀 Главное меню 🚀")],
-            [KeyboardButton("✉️ Написать сообщение")]  # Основная кнопка для запросов
+            [KeyboardButton("✉️ Написать сообщение")],  # Основная кнопка для запросов
         ],
         resize_keyboard=True,
         is_persistent=True,
-        input_field_placeholder="Выберите действие..."
+        input_field_placeholder="Выберите действие...",
     )
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     user_states[user_id] = MAIN_MENU
-    
+
     welcome_message = (
         "👋 **Добро пожаловать в TgProbot!**\n\n"
         "🤖 **Что умеет этот бот:**\n"
@@ -143,11 +157,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• 🏢 **Узнать контакты** и расположение кабинетов специалистов\n\n"
         "🚀 **Нажмите кнопку СТАРТ, чтобы начать работу!**"
     )
-    
+
     await update.message.reply_text(
-        welcome_message,
-        reply_markup=get_main_reply_markup(),
-        parse_mode='Markdown'
+        welcome_message, reply_markup=get_main_reply_markup(), parse_mode="Markdown"
     )
 
 
@@ -166,7 +178,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             contact_info.append(f"Телеграм: @{user.username}")
 
         # Можно добавить запрос номера телефона
-        contact_text = "\n".join(contact_info) if contact_info else "Контактные данные не указаны"
+        contact_text = (
+            "\n".join(contact_info) if contact_info else "Контактные данные не указаны"
+        )
 
         subject = f"Сообщение от пользователя Telegram"
         message = f"""
@@ -183,20 +197,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         logger.info("Попытка отправки email...")
         logger.info(f"Текст сообщения: {update.message.text}")
-        
+
         email_success = await send_email(subject, message)
-        
+
         if email_success:
             logger.info("Email успешно отправлен на сервере")
             await update.message.reply_text(
                 "✅ Ваше сообщение успешно отправлено! Сообщение обработают и свяжутся с вами, если для запроса это необходимо!",
-                reply_markup=get_main_reply_markup()
+                reply_markup=get_main_reply_markup(),
             )
         else:
             logger.error("Не удалось отправить email на сервере")
             await update.message.reply_text(
                 "❌ Произошла ошибка при отправке. Пожалуйста, попробуйте позже.",
-                reply_markup=get_main_reply_markup()
+                reply_markup=get_main_reply_markup(),
             )
 
         user_states[user_id] = MAIN_MENU
@@ -212,14 +226,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "• Суть вашего вопроса или проблемы\n\n"
             "📧 **Ваше сообщение будет автоматически отправлено специалистам**\n"
             "✅ **Мы обработаем запрос и свяжемся с вами в ближайшее время!**",
-            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("🔙 Отмена")]], resize_keyboard=True),
-            parse_mode='Markdown'
+            reply_markup=ReplyKeyboardMarkup(
+                [[KeyboardButton("🔙 Отмена")]], resize_keyboard=True
+            ),
+            parse_mode="Markdown",
         )
     elif update.message.text == "🔙 Отмена":
         user_states[user_id] = MAIN_MENU
         await update.message.reply_text(
-            "Действие отменено",
-            reply_markup=get_main_reply_markup()
+            "Действие отменено", reply_markup=get_main_reply_markup()
         )
     else:
         await update.message.reply_text(
@@ -232,8 +247,13 @@ async def show_main_menu(update: Update):
     user_states[update.effective_user.id] = MAIN_MENU
     keyboard = [
         [
-            InlineKeyboardButton("👨‍⚕️ Психологическая служба", callback_data="psychologists"),
-            InlineKeyboardButton("👩‍🏫 Социально-педагогическая служба", callback_data="social_pedagogues"),
+            InlineKeyboardButton(
+                "👨‍⚕️ Психологическая служба", callback_data="psychologists"
+            ),
+            InlineKeyboardButton(
+                "👩‍🏫 Социально-педагогическая служба",
+                callback_data="social_pedagogues",
+            ),
         ]
         # Убрана кнопка "✉️ Обратиться с запросом"
     ]
@@ -241,8 +261,7 @@ async def show_main_menu(update: Update):
 
     if update.callback_query:
         await update.callback_query.edit_message_text(
-            text="Выберите категорию специалистов:",
-            reply_markup=reply_markup
+            text="Выберите категорию специалистов:", reply_markup=reply_markup
         )
     else:
         await update.message.reply_text(
@@ -256,8 +275,9 @@ async def show_main_menu(update: Update):
             "- другие комментарии о воспитательном процессе**"
             "Запрос будет обработан и ответ будет направлен вам в сообщения.\n\n",
             reply_markup=reply_markup,
-            parse_mode='Markdown'
+            parse_mode="Markdown",
         )
+
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -299,12 +319,12 @@ async def send_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not path.exists(photo_path):
             await query.edit_message_text("Извините, изображение временно недоступно.")
             return
-            
-        with open(photo_path, 'rb') as photo:
+
+        with open(photo_path, "rb") as photo:
             await context.bot.send_photo(
                 chat_id=query.message.chat_id,
                 photo=photo,
-                caption="Памятка на документы для социальных выплат"
+                caption="Памятка на документы для социальных выплат",
             )
     except Exception as e:
         logger.error(f"Ошибка при отправке изображения: {e}")
@@ -320,13 +340,13 @@ async def send_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not path.exists(doc_path):
             await query.edit_message_text("Извините, документ временно недоступен.")
             return
-            
-        with open(doc_path, 'rb') as doc:
+
+        with open(doc_path, "rb") as doc:
             await context.bot.send_document(
                 chat_id=query.message.chat_id,
                 document=doc,
                 filename="Заявление на мат. помощь.docx",
-                caption="Заявление на материальную помощь"
+                caption="Заявление на материальную помощь",
             )
     except Exception as e:
         logger.error(f"Ошибка при отправке документа: {e}")
@@ -354,64 +374,74 @@ async def show_psychologists_menu(update: Update):
             ),
         ],
         [InlineKeyboardButton("🧠 Диагностика", callback_data="psycho_tests")],
-
         [InlineKeyboardButton("🔙 Назад", callback_data="back")],
     ]
     await update.callback_query.edit_message_text(
-        text=message,
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        text=message, reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
 
 async def show_psycho_test_menu(update: Update):
     user_states[update.effective_user.id] = PSYCHOLOGISTS_MENU
-    message = ("🧠 Психологическая диагностика:\nВыберите тест:")
+    message = "🧠 Психологическая диагностика:\nВыберите тест:"
 
     keyboard = [
         [
-            InlineKeyboardButton("ИРКПО платформа для тестирования", url="https://irkpo.ru/test/psy"),
-            InlineKeyboardButton("СПС (состояния)", url="https://psytests.org/emo/eyespsy-run.html?ysclid=makjgxwmo6267738449")
+            InlineKeyboardButton(
+                "ИРКПО платформа для тестирования", url="https://irkpo.ru/test/psy"
+            ),
+            InlineKeyboardButton(
+                "СПС (состояния)",
+                url="https://psytests.org/emo/eyespsy-run.html?ysclid=makjgxwmo6267738449",
+            ),
         ],
         [
-            InlineKeyboardButton("Депрессия (Бека)", url="https://psytests.org/depr/bdi-run.html"),
-            InlineKeyboardButton("Способы совладающего поведения", url="https://psytests.org/coping/wcq-run.html")
+            InlineKeyboardButton(
+                "Депрессия (Бека)", url="https://psytests.org/depr/bdi-run.html"
+            ),
+            InlineKeyboardButton(
+                "Способы совладающего поведения",
+                url="https://psytests.org/coping/wcq-run.html",
+            ),
         ],
         [
-            InlineKeyboardButton("Опросник Акцент-2-90", url="https://psytests.org/accent/shmi90acc-run.html?ysclid=makklskzii872720319"),
-            InlineKeyboardButton("СОП", url="https://psytests.org/parent/osopFf-run.html?ysclid=m6q6vdbfac18846130")
+            InlineKeyboardButton(
+                "Опросник Акцент-2-90",
+                url="https://psytests.org/accent/shmi90acc-run.html?ysclid=makklskzii872720319",
+            ),
+            InlineKeyboardButton(
+                "СОП",
+                url="https://psytests.org/parent/osopFf-run.html?ysclid=m6q6vdbfac18846130",
+            ),
         ],
-        [InlineKeyboardButton("🔙 Назад", callback_data="psychologists")]  # Возврат в меню психологов
+        [
+            InlineKeyboardButton("🔙 Назад", callback_data="psychologists")
+        ],  # Возврат в меню психологов
     ]
 
     await update.callback_query.edit_message_text(
-        text=message,
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        text=message, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 async def show_social_pedagogues_menu(update: Update):
     user_states[update.effective_user.id] = SOCIAL_PEDAGOGUES_MENU
     message = (
-
         "👩‍🏫 Социальный педагог: Дунаевская Елена Николаевна Ул. 5-ая Железнодорожная, д. 53 каб. 216\n"
         "👩‍🏫 Начальник отдела СППС: Тепляшин Д.В.:\n\n"
     )
     keyboard = [
         [
             InlineKeyboardButton(
-                "💬 Дунаевская Е.Н.",
-                url="https://t.me/lina_dunaevskya"
+                "💬 Дунаевская Е.Н.", url="https://t.me/lina_dunaevskya"
             ),
-            InlineKeyboardButton(
-                "💬 Тепляшин Д.В.",
-                url="https://t.me/DVteplyi"
-            )
+            InlineKeyboardButton("💬 Тепляшин Д.В.", url="https://t.me/DVteplyi"),
         ],
         [InlineKeyboardButton("📄 Документы", callback_data="documents")],
         [InlineKeyboardButton("🔙 Назад", callback_data="back")],
     ]
     await update.callback_query.edit_message_text(
-        text=message,
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        text=message, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -419,19 +449,21 @@ async def show_documents_menu(update: Update):
     user_states[update.effective_user.id] = DOCUMENTS_MENU
     message = "📄 Документы от социальных педагогов:"
     keyboard = [
-        [InlineKeyboardButton(
-            "📝 Памятка на документы для социальных выплат",
-            callback_data="get_guide"
-        )],
-        [InlineKeyboardButton(
-            "📝 Заявление на мат. помощь",
-            callback_data="get_application"
-        )],
+        [
+            InlineKeyboardButton(
+                "📝 Памятка на документы для социальных выплат",
+                callback_data="get_guide",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📝 Заявление на мат. помощь", callback_data="get_application"
+            )
+        ],
         [InlineKeyboardButton("🔙 Назад", callback_data="back")],
     ]
     await update.callback_query.edit_message_text(
-        text=message,
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        text=message, reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -439,11 +471,13 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         logger.error(f"Ошибка: {context.error}", exc_info=context.error)
 
-        if update and hasattr(update, 'effective_chat'):  # Проверяем наличие объекта effective_chat
+        if update and hasattr(
+            update, "effective_chat"
+        ):  # Проверяем наличие объекта effective_chat
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="Произошла ошибка. Пожалуйста, попробуйте снова.",
-                reply_markup=get_main_reply_markup()
+                reply_markup=get_main_reply_markup(),
             )
         else:
             logger.error("Update или effective_chat отсутствует")
@@ -457,25 +491,28 @@ def main() -> None:
         if not token_bot:
             logger.error("Токен бота не загружен!")
             sys.exit(1)
-            
+
         logger.info("Запуск Telegram бота...")
-        
+
         application = Application.builder().token(token_bot).build()
         application.add_handler(CommandHandler("start", start))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        application.add_handler(
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
+        )
         application.add_handler(CallbackQueryHandler(button_click))
         application.add_error_handler(error_handler)
-        
+
         logger.info("Бот запущен и готов к работе!")
         application.run_polling(
             poll_interval=1.0,  # Увеличиваем интервал для стабильности
-            timeout=30,          # Увеличиваем timeout
-            drop_pending_updates=True
+            timeout=30,  # Увеличиваем timeout
+            drop_pending_updates=True,
         )
-        
+
     except Exception as e:
         logger.error(f"Критическая ошибка при запуске бота: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
