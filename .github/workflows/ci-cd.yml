@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     name: Deploy to Server
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'push'
     
     steps:
     - name: Checkout code
@@ -87,7 +87,7 @@ jobs:
         port: ${{ secrets.SERVER_PORT }}
         script: |
           cd /opt/TgProbot
-          git pull origin main
+          git pull
           docker-compose down
           docker-compose up -d --build
           docker system prune -f
