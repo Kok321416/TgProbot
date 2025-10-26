@@ -100,6 +100,7 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT }}
         script: |
+          cd /opt/TgProbot
           sleep 10
           docker-compose ps
           docker-compose logs --tail=20
