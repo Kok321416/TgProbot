@@ -39,16 +39,7 @@ EMAIL_PASSWORD = getenv("EMAIL_PASSWORD")
 EMAIL_TO = getenv("EMAIL_TO")
 token_bot = getenv("TOKEN")
 
-# Проверка загрузки критических переменных
-if not all([EMAIL_USER, EMAIL_PASSWORD, EMAIL_TO, token_bot]):
-    logger.error("Не все обязательные переменные окружения загружены!")
-    logger.error(f"EMAIL_USER: {'✓' if EMAIL_USER else '✗'}")
-    logger.error(f"EMAIL_PASSWORD: {'✓' if EMAIL_PASSWORD else '✗'}")
-    logger.error(f"EMAIL_TO: {'✓' if EMAIL_TO else '✗'}")
-    logger.error(f"TOKEN: {'✓' if token_bot else '✗'}")
-    sys.exit(1)
-
-print(f"Настройки загружены: {EMAIL_USER}@{EMAIL_HOST}:{EMAIL_PORT}")
+# Проверка загрузки критических переменных будет при запуске в функции main()
 
 # Константы
 DATA_DIR = "./data"
@@ -487,11 +478,16 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main() -> None:
     try:
-        # Проверяем, что токен загружен
-        if not token_bot:
-            logger.error("Токен бота не загружен!")
+        # Проверяем, что все переменные окружения загружены
+        if not all([EMAIL_USER, EMAIL_PASSWORD, EMAIL_TO, token_bot]):
+            logger.error("Не все обязательные переменные окружения загружены!")
+            logger.error(f"EMAIL_USER: {'✓' if EMAIL_USER else '✗'}")
+            logger.error(f"EMAIL_PASSWORD: {'✓' if EMAIL_PASSWORD else '✗'}")
+            logger.error(f"EMAIL_TO: {'✓' if EMAIL_TO else '✗'}")
+            logger.error(f"TOKEN: {'✓' if token_bot else '✗'}")
             sys.exit(1)
 
+        logger.info(f"Настройки загружены: {EMAIL_USER}@{EMAIL_HOST}:{EMAIL_PORT}")
         logger.info("Запуск Telegram бота...")
 
         application = Application.builder().token(token_bot).build()
