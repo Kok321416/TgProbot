@@ -21,7 +21,10 @@ class TestTgProbot:
         markup = get_main_reply_markup()
         assert markup is not None
         assert len(markup.keyboard) == 2  # Две строки кнопок
-        assert len(markup.keyboard[0]) == 2  # Две кнопки в первой строке
+        assert len(markup.keyboard[0]) == 1  # Одна кнопка в первой строке
+        assert len(markup.keyboard[1]) == 1  # Одна кнопка во второй строке
+        assert markup.keyboard[0][0].text == "🚀 Главное меню 🚀"
+        assert markup.keyboard[1][0].text == "✉️ Написать сообщение"
 
     @pytest.mark.asyncio
     async def test_send_email_success(self):
