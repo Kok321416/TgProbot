@@ -361,7 +361,7 @@ async def show_psychologists_menu(update: Update):
             ),
             InlineKeyboardButton(
                 "📅 Степанец записаться",
-                url="https://calendar.app.google/rUBavWmw5Uejk9Zp6",
+                url="https://calendar.app.google/VUcjHWTg2mi5EtL77",
             ),
         ],
         [InlineKeyboardButton("🧠 Диагностика", callback_data="psycho_tests")],
